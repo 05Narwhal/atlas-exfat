@@ -6,6 +6,7 @@ rust-version = "1.88"
 license = "MIT OR Apache-2.0"
 description = "Read exFAT volumes: boot sector, allocation bitmap, entry sets, contiguous and chained files."
 repository = "https://github.com/05Narwhal/atlas-exfat"
+homepage = "https://julianloy.com"
 readme = "README.md"
 keywords = ["exfat", "filesystem", "parser", "sdxc", "flash"]
 categories = ["filesystem", "parser-implementations"]
