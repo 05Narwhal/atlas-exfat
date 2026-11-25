@@ -1,6 +1,6 @@
 # atlas-exfat
 
-<!-- badges -->[![crates.io](https://img.shields.io/crates/v/atlas-exfat.svg)](https://crates.io/crates/atlas-exfat) [![docs.rs](https://img.shields.io/docsrs/atlas-exfat)](https://docs.rs/atlas-exfat) [![CI](https://github.com/05Narwhal/atlas-exfat/actions/workflows/ci.yml/badge.svg)](https://github.com/05Narwhal/atlas-exfat/actions/workflows/ci.yml) ![License](https://img.shields.io/crates/l/atlas-exfat.svg)
+[![crates.io](https://img.shields.io/crates/v/atlas-exfat.svg)](https://crates.io/crates/atlas-exfat) [![docs.rs](https://img.shields.io/docsrs/atlas-exfat)](https://docs.rs/atlas-exfat) [![CI](https://github.com/05Narwhal/atlas-exfat/actions/workflows/ci.yml/badge.svg)](https://github.com/05Narwhal/atlas-exfat/actions/workflows/ci.yml) ![License](https://img.shields.io/crates/l/atlas-exfat.svg)
 
 A read-only exFAT reader. It implements `atlas_fs_core::fs::FileSystem`, so a mounted volume lists folders, looks up names, reads
 file content and reports its allocation through the same trait as the other `atlas-*` readers.
