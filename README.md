@@ -2,28 +2,57 @@
 
 [![crates.io](https://img.shields.io/crates/v/atlas-exfat.svg)](https://crates.io/crates/atlas-exfat) [![docs.rs](https://img.shields.io/docsrs/atlas-exfat)](https://docs.rs/atlas-exfat) [![CI](https://github.com/05Narwhal/atlas-exfat/actions/workflows/ci.yml/badge.svg)](https://github.com/05Narwhal/atlas-exfat/actions/workflows/ci.yml) ![License](https://img.shields.io/crates/l/atlas-exfat.svg)
 
-A read-only exFAT reader. It implements `atlas_fs_core::fs::FileSystem`, so a mounted volume lists folders, looks up names, reads
-file content and reports its allocation through the same trait as the other `atlas-*` readers.
+**A read-only exFAT reader.**
 
-- Boot sector, allocation bitmap and FAT, contiguous and FAT-chained files.
-- Directory entry sets (file, stream extension, name) with long UTF-16 names, timestamps with UTC offsets, and the volume label.
+exFAT is the default on SDXC cards, large USB drives and many cameras. `atlas-exfat` mounts such a volume from any `BlockSource` and implements `atlas_fs_core::fs::FileSystem`, so it is used exactly like the other `atlas-*` readers.
+
+## Features
+
+- Boot sector, allocation bitmap and FAT; contiguous files and FAT-chained files.
+- Directory **entry sets** (file, stream extension, name) with long UTF-16 names, timestamps with UTC offsets, and the volume label.
+- A file's data length is honoured, with zeros after its valid data length.
 - Entry sets that straddle a cluster boundary are found again by `metadata`.
-- No `unsafe`. Every length, offset and count read from the disk is checked; damage is an error, not a panic.
+
+## Quick start
 
 ```rust,no_run
+use std::path::Path;
 use std::sync::Arc;
-use atlas_fs_core::fs::FileSystem;
-use atlas_fs_core::io::block::BlockSource;
+
+use atlas_fs_core::fs::{DirBatch, DirProgress, FileSystem};
 use atlas_fs_core::io::file::FileSource;
 
-let source: Arc<dyn BlockSource> = Arc::new(FileSource::open("volume.img".as_ref())?);
+let source = Arc::new(FileSource::open(Path::new("volume.img"))?);
 let volume = atlas_exfat::mount(source)?;
-let mut dir = volume.read_dir(volume.root())?;
-# Ok::<(), atlas_fs_core::error::Error>(())
+println!("{}", volume.info().name);
+
+let mut stream = volume.read_dir(volume.root())?;
+let mut batch = DirBatch::new();
+while stream.next_batch(&mut batch, 256)? == DirProgress::More {}
+for entry in batch.iter() {
+    println!("{}", entry.name);
+}
 ```
 
-The `test-util` feature exposes the test image builder and fuzz seed inputs; it is for tests of crates that use
-this one and is not part of the stable API.
+## How it works
+
+`mount` parses the boot sector (`boot`), loads the first FAT (`table`) and answers `FileSystem` calls. Directories are walked by `dir::Walker` over a cluster chain. A file is the chain of its clusters, or one contiguous run when its stream says it has no FAT chain.
+
+Node ids are the volume byte offset of the file entry set's primary; the root is the first byte of the root cluster plus one. The reader remembers where the stream slot of a set that crosses a cluster boundary lives, in a table capped at `MAX_REMEMBERED` sets, and directories are capped at `MAX_DIR_BYTES` (256 MiB), so a hostile volume cannot make a listing grow without bound.
+
+Builds on `atlas-fat` for the cluster-chain walker.
+
+## Safety and robustness
+
+- **No `unsafe`.** The crate is `#![forbid(unsafe_code)]`.
+- **On-disk bytes are hostile.** Every length, offset and count read from a disk is validated before use. Damage is returned as an error, never a panic, an unchecked index or an unbounded loop.
+- **Lints enforce it.** Clippy's `indexing_slicing`, `arithmetic_side_effects`, `unwrap_used`, `expect_used` and `panic` lints are on for the library code.
+- **Read-only.** Nothing in this crate writes to a disk or image.
+- **Fuzzed.** A `cargo-fuzz` target in `fuzz/` runs the parser on arbitrary bytes.
+
+## Feature flags
+
+- `test-util`: exposes the synthetic test image builders and fuzz seed inputs this crate's own tests use, for tests of crates built on it. It is not part of the stable API.
 
 ## Install
 
@@ -32,7 +61,9 @@ this one and is not part of the stable API.
 atlas-exfat = "26.0.1-a"
 ```
 
-Minimum supported Rust version: 1.88.
+Versions follow `26.MAJOR.MINOR-STAGE`: the year, the major and minor version, and a stage letter (`a` alpha, `b` beta, `s` stable). Cargo treats a stage suffix as a pre-release, so name the version exactly as above.
+
+Minimum supported Rust version: 1.88 (edition 2024).
 
 ## Licence
 
